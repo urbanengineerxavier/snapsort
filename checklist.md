@@ -4,12 +4,12 @@
 - [x] **1a: FastAPI Setup** — Initialize project with uv, FastAPI, Jinja2, Tailwind CSS (CDN)
 - [x] **1b: Supabase Connection** — Add supabase-py, config module, health check endpoint
 - [x] **1c: Database Schema** — Create tables in Supabase (users, databases)
-- [ ] **1d: HTMX Setup** — Add HTMX to base template for interactive updates
+- [x] **1d: HTMX Setup** — Add HTMX to base template for interactive updates
 
 ## Phase 2: Notion OAuth
-- [ ] **2a: OAuth Flow** — Redirect to Notion, handle callback, store access token
-- [ ] **2b: Session Management** — Cookie-based sessions to track logged-in users
-- [ ] **2c: Fetch Databases** — Get user's Notion databases and store in Supabase
+- [x] **2a: OAuth Flow** — Redirect to Notion, handle callback, store access token
+- [x] **2b: Session Management** — Cookie-based sessions to track logged-in users
+- [x] **2c: Fetch Databases** — Get user's Notion databases and store in Supabase
 
 ## Phase 3: Onboarding + Dashboard UI
 - [ ] **3a: Onboarding Page** — Database selection checklist (first visit)
