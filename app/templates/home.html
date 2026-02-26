@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="max-w-4xl mx-auto px-4 py-16">
+        <h1 class="text-4xl font-bold text-gray-900 text-center">
+            SnapSort
+        </h1>
+        <p class="mt-4 text-lg text-gray-600 text-center">
+            Every screenshot, exactly where it belongs in Notion
+        </p>
+
+        <div class="mt-12 text-center">
+            {% if user %}
+                <p class="text-gray-600 mb-4">
+                    Connected to: <strong>{{ user.notion_workspace_name }}</strong>
+                </p>
+                <a href="/dashboard" class="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700">
+                    Go to Dashboard
+                </a>
+            {% else %}
+                <a href="/auth/notion" class="inline-block bg-black text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-800">
+                    Connect Notion
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>
