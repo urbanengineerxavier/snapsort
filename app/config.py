@@ -15,6 +15,9 @@ class Settings:
     NOTION_CLIENT_ID: str = os.getenv("NOTION_CLIENT_ID", "")
     NOTION_CLIENT_SECRET: str = os.getenv("NOTION_CLIENT_SECRET", "")
 
+    # OpenAI
+    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+
     @property
     def NOTION_REDIRECT_URI(self) -> str:
         return f"{self.APP_URL}/auth/notion/callback"

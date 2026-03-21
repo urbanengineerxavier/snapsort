@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - SnapSort</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <main class="max-w-2xl mx-auto px-4 py-16">
+        <h1 class="text-3xl font-bold text-gray-900">Welcome to SnapSort</h1>
+        <p class="mt-2 text-gray-600">
+            Select the databases you want in your quick-picker. You can change this later.
+        </p>
+
+        <form action="/onboarding/complete" method="post" class="mt-8">
+            <div class="space-y-3">
+                {% for db in databases %}
+                <label class="flex items-center gap-3 p-4 border rounded-lg bg-white cursor-pointer hover:border-blue-500 transition-colors">
+                    <input
+                        type="checkbox"
+                        name="database_ids"
+                        value="{{ db.id }}"
+                        {% if db.is_in_picker %}checked{% endif %}
+                        class="w-5 h-5 text-blue-600 rounded"
+                    >
+                    <span class="text-xl">{{ db.icon or '📁' }}</span>
+                    <span class="text-gray-900">{{ db.name }}</span>
+                </label>
+                {% else %}
+                <p class="text-gray-500 p-4 border rounded-lg bg-white">
+                    No databases found. Make sure you granted access to databases during Notion authorization.
+                </p>
+                {% endfor %}
+            </div>
+
+            {% if databases %}
+            <button
+                type="submit"
+                class="mt-8 w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+            >
+                Continue to Dashboard
+            </button>
+            {% else %}
+            <a
+                href="/auth/notion"
+                class="mt-8 block w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors text-center"
+            >
+                Reconnect Notion
+            </a>
+            {% endif %}
+        </form>
+    </main>
+</body>
+</html>

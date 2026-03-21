@@ -1,7 +1,8 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
+from typing import List
 
 from app.db import get_supabase
 from app.auth import router as auth_router
@@ -37,6 +38,44 @@ async def dashboard(request: Request):
         "user": user,
         "databases": databases,
     })
+
+
+@app.get("/onboarding", response_class=HTMLResponse)
+async def onboarding(request: Request):
+    user = get_current_user(request)
+    if not user:
+        return RedirectResponse(url="/", status_code=302)
+
+    supabase = get_supabase()
+    result = supabase.table("databases").select("*").eq("user_id", user["id"]).order("picker_order").execute()
+    databases = result.data or []
+
+    return templates.TemplateResponse(request, "onboarding.html", {
+        "title": "Setup",
+        "user": user,
+        "databases": databases,
+    })
+
+
+@app.post("/onboarding/complete")
+async def onboarding_complete(request: Request, database_ids: List[str] = Form(default=[])):
+    user = get_current_user(request)
+    if not user:
+        return RedirectResponse(url="/", status_code=302)
+
+    supabase = get_supabase()
+
+    # Set all databases to not in picker first
+    supabase.table("databases").update({"is_in_picker": False}).eq("user_id", user["id"]).execute()
+
+    # Then enable only the selected ones
+    for i, db_id in enumerate(database_ids):
+        supabase.table("databases").update({
+            "is_in_picker": True,
+            "picker_order": i,
+        }).eq("id", db_id).eq("user_id", user["id"]).execute()
+
+    return RedirectResponse(url="/dashboard", status_code=302)
 
 
 @app.get("/health")

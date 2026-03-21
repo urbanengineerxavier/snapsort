@@ -90,8 +90,8 @@ async def notion_callback(code: str | None = None, error: str | None = None):
     # Fetch and store user's Notion databases
     await fetch_and_store_databases(str(user_id), access_token)
 
-    # Create session cookie and redirect to dashboard
-    response = RedirectResponse(url="/dashboard", status_code=302)
+    # Create session cookie and redirect to onboarding
+    response = RedirectResponse(url="/onboarding", status_code=302)
     create_session(response, str(user_id))
     return response
 

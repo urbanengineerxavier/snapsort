@@ -28,37 +28,509 @@
             Upload a screenshot and route it to your Notion databases.
         </p>
 
-        <!-- Placeholder for upload zone (Phase 4) -->
-        <div class="mt-8 border-2 border-dashed border-gray-300 rounded-lg p-12 text-center">
-            <p class="text-gray-500">Upload zone coming in Phase 4</p>
-        </div>
-
-        <!-- Database picker -->
-        <div class="mt-8">
-            <div class="flex justify-between items-center">
-                <h2 class="text-lg font-medium text-gray-900">Your Databases</h2>
-                <button
-                    hx-post="/api/databases/sync"
-                    hx-target="#database-list"
-                    hx-swap="innerHTML"
-                    class="text-sm text-blue-600 hover:text-blue-800"
-                >
-                    Sync
+        <!-- Upload Zone -->
+        <div id="upload-zone" class="mt-8 border-2 border-dashed border-gray-300 rounded-lg p-12 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
+            <input type="file" id="file-input" accept="image/*" multiple class="hidden">
+            <div id="upload-prompt">
+                <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                    <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <p class="mt-4 text-gray-600">Drag & drop a screenshot, paste from clipboard, or</p>
+                <button type="button" id="browse-btn" class="mt-2 text-blue-600 hover:text-blue-800 font-medium">
+                    browse files
                 </button>
             </div>
-            <div id="database-list" class="mt-4 grid gap-2">
-                {% if databases %}
-                    {% for db in databases %}
-                    <div class="p-3 border rounded-lg bg-white flex items-center gap-2">
-                        <span>{{ db.icon or '📁' }}</span>
-                        <span>{{ db.name }}</span>
-                    </div>
+            <div id="upload-preview" class="hidden">
+                <div id="preview-gallery" class="flex flex-wrap gap-3 justify-center"></div>
+                <p id="upload-status" class="mt-2 text-sm text-gray-600"></p>
+                <button type="button" id="clear-btn" class="mt-2 text-sm text-red-600 hover:text-red-800">
+                    Clear all
+                </button>
+            </div>
+            <div id="upload-loading" class="hidden">
+                <svg class="animate-spin h-8 w-8 mx-auto text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <p class="mt-2 text-gray-600">Uploading...</p>
+            </div>
+        </div>
+
+        <!-- Hidden field for uploaded image URL -->
+        <input type="hidden" id="uploaded-image-url" value="">
+
+        <!-- Classification selector (appears after upload) -->
+        <div id="classification-section" class="hidden mt-6">
+            <h2 class="text-lg font-medium text-gray-900 mb-3">Classify as</h2>
+            <div class="flex flex-wrap gap-2">
+                <button type="button" class="classification-btn px-4 py-2 border rounded-full text-sm bg-white hover:bg-blue-50 hover:border-blue-500 transition-colors" data-value="Learning">Learning</button>
+                <button type="button" class="classification-btn px-4 py-2 border rounded-full text-sm bg-white hover:bg-blue-50 hover:border-blue-500 transition-colors" data-value="Business">Business</button>
+                <button type="button" class="classification-btn px-4 py-2 border rounded-full text-sm bg-white hover:bg-blue-50 hover:border-blue-500 transition-colors" data-value="Recipe">Recipe</button>
+                <button type="button" class="classification-btn px-4 py-2 border rounded-full text-sm bg-white hover:bg-blue-50 hover:border-blue-500 transition-colors" data-value="Personal">Personal</button>
+                <button type="button" class="classification-btn px-4 py-2 border rounded-full text-sm bg-white hover:bg-blue-50 hover:border-blue-500 transition-colors" data-value="Reference">Reference</button>
+                <button type="button" class="classification-btn px-4 py-2 border rounded-full text-sm bg-white hover:bg-blue-50 hover:border-blue-500 transition-colors" data-value="Other">Other</button>
+            </div>
+            <p id="selected-classification" class="mt-2 text-sm text-gray-500">No classification selected (optional)</p>
+        </div>
+
+        <!-- Database picker grid -->
+        <div id="database-section" class="mt-8">
+            <div class="flex justify-between items-center">
+                <h2 class="text-lg font-medium text-gray-900">Route to Database</h2>
+                <span id="route-hint" class="hidden text-sm text-blue-600 animate-pulse">Click a database to route</span>
+                <div class="flex items-center gap-3">
+                    <button type="button" id="sync-btn" class="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1">
+                        <svg id="sync-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        <span id="sync-text">Sync</span>
+                    </button>
+                    <a href="/onboarding" class="text-sm text-blue-600 hover:text-blue-800">
+                        Manage
+                    </a>
+                </div>
+            </div>
+            <div id="database-list" class="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {% set picker_dbs = databases | selectattr('is_in_picker') | list %}
+                {% if picker_dbs %}
+                    {% for db in picker_dbs %}
+                    <button
+                        type="button"
+                        class="db-btn p-4 border rounded-lg bg-white hover:border-blue-500 hover:bg-blue-50 transition-colors flex flex-col items-center gap-2 text-center disabled:opacity-50 disabled:cursor-not-allowed"
+                        data-db-id="{{ db.id }}"
+                        data-db-name="{{ db.name }}"
+                    >
+                        <span class="text-2xl">{{ db.icon or '📁' }}</span>
+                        <span class="text-sm text-gray-700 truncate w-full">{{ db.name }}</span>
+                    </button>
                     {% endfor %}
                 {% else %}
-                    <p class="text-gray-500">No databases found. Click Sync to fetch from Notion.</p>
+                    <p class="col-span-full text-gray-500">No databases selected. <a href="/onboarding" class="text-blue-600 hover:underline">Add some</a></p>
                 {% endif %}
             </div>
         </div>
+
+        <!-- Processing indicator -->
+        <div id="processing-section" class="hidden mt-8">
+            <div class="border rounded-lg p-8 text-center bg-white">
+                <svg class="animate-spin h-10 w-10 mx-auto text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <p class="mt-4 text-gray-600">Extracting data and creating Notion pages...</p>
+            </div>
+        </div>
+
+        <!-- Results section -->
+        <div id="results-section" class="hidden mt-8">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-medium text-gray-900">Results</h2>
+                <button type="button" id="route-more-btn" class="text-sm text-blue-600 hover:text-blue-800">
+                    Route more
+                </button>
+            </div>
+            <div id="results-list" class="space-y-3"></div>
+        </div>
     </main>
+    <script>
+        const uploadZone = document.getElementById('upload-zone');
+        const fileInput = document.getElementById('file-input');
+        const browseBtn = document.getElementById('browse-btn');
+        const clearBtn = document.getElementById('clear-btn');
+        const uploadPrompt = document.getElementById('upload-prompt');
+        const uploadPreview = document.getElementById('upload-preview');
+        const uploadLoading = document.getElementById('upload-loading');
+        const previewGallery = document.getElementById('preview-gallery');
+        const uploadStatus = document.getElementById('upload-status');
+        const uploadedImageUrl = document.getElementById('uploaded-image-url');
+
+        // Track uploaded images and classification
+        let uploadedImages = [];
+        let pendingUploads = 0;
+        let selectedClassification = null;
+        const MAX_IMAGES = 10;
+
+        // Classification buttons
+        const classificationSection = document.getElementById('classification-section');
+        const classificationBtns = document.querySelectorAll('.classification-btn');
+        const selectedClassificationText = document.getElementById('selected-classification');
+
+        classificationBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Toggle selection
+                if (btn.classList.contains('bg-blue-500')) {
+                    btn.classList.remove('bg-blue-500', 'text-white', 'border-blue-500');
+                    btn.classList.add('bg-white');
+                    selectedClassification = null;
+                    selectedClassificationText.textContent = 'No classification selected (optional)';
+                } else {
+                    classificationBtns.forEach(b => {
+                        b.classList.remove('bg-blue-500', 'text-white', 'border-blue-500');
+                        b.classList.add('bg-white');
+                    });
+                    btn.classList.remove('bg-white');
+                    btn.classList.add('bg-blue-500', 'text-white', 'border-blue-500');
+                    selectedClassification = btn.dataset.value;
+                    selectedClassificationText.textContent = `Classification: ${selectedClassification}`;
+                }
+            });
+        });
+
+        // Browse button click
+        browseBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            fileInput.click();
+        });
+
+        // Upload zone click (allow adding more)
+        uploadZone.addEventListener('click', (e) => {
+            if (e.target.closest('#upload-preview')) return;
+            fileInput.click();
+        });
+
+        // File input change
+        fileInput.addEventListener('change', (e) => {
+            for (const file of e.target.files) {
+                handleFile(file);
+            }
+            fileInput.value = '';
+        });
+
+        // Drag and drop
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('border-blue-500', 'bg-blue-50');
+        });
+
+        uploadZone.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('border-blue-500', 'bg-blue-50');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('border-blue-500', 'bg-blue-50');
+            for (const file of e.dataTransfer.files) {
+                if (file.type.startsWith('image/')) {
+                    handleFile(file);
+                }
+            }
+        });
+
+        // Paste from clipboard
+        document.addEventListener('paste', (e) => {
+            const items = e.clipboardData.items;
+            for (let item of items) {
+                if (item.type.startsWith('image/')) {
+                    const file = item.getAsFile();
+                    handleFile(file);
+                }
+            }
+        });
+
+        // Clear all button
+        clearBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            clearAllUploads();
+        });
+
+        function handleFile(file) {
+            // Check limit
+            if (uploadedImages.length + pendingUploads >= MAX_IMAGES) {
+                alert(`Maximum ${MAX_IMAGES} images allowed at a time.`);
+                return;
+            }
+
+            const imageId = Date.now() + Math.random();
+            pendingUploads++;
+            updateStatus();
+
+            // Show preview and loading state
+            uploadPrompt.classList.add('hidden');
+            uploadPreview.classList.remove('hidden');
+
+            // Create preview element
+            const previewEl = document.createElement('div');
+            previewEl.className = 'relative';
+            previewEl.id = `preview-${imageId}`;
+            previewEl.innerHTML = `
+                <div class="w-24 h-24 rounded-lg bg-gray-100 flex items-center justify-center">
+                    <svg class="animate-spin h-6 w-6 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </div>
+            `;
+            previewGallery.appendChild(previewEl);
+
+            // Upload to server
+            uploadFile(file, imageId);
+        }
+
+        async function uploadFile(file, imageId) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Upload failed');
+                }
+
+                const data = await response.json();
+                uploadedImages.push({ id: imageId, url: data.url, filename: data.filename });
+                updateHiddenField();
+
+                // Update preview with actual image
+                const previewEl = document.getElementById(`preview-${imageId}`);
+                if (previewEl) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        previewEl.innerHTML = `
+                            <img src="${e.target.result}" class="w-24 h-24 object-cover rounded-lg shadow-md">
+                            <button type="button" onclick="removeImage(${imageId})" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600">&times;</button>
+                        `;
+                    };
+                    reader.readAsDataURL(file);
+                }
+
+            } catch (error) {
+                console.error('Upload error:', error);
+                const previewEl = document.getElementById(`preview-${imageId}`);
+                if (previewEl) {
+                    previewEl.innerHTML = `
+                        <div class="w-24 h-24 rounded-lg bg-red-100 flex items-center justify-center text-red-500 text-xs p-2 text-center">
+                            Failed
+                            <button type="button" onclick="this.parentElement.parentElement.remove(); updateStatus();" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600">&times;</button>
+                        </div>
+                    `;
+                }
+            } finally {
+                pendingUploads--;
+                updateStatus();
+            }
+        }
+
+        function removeImage(imageId) {
+            uploadedImages = uploadedImages.filter(img => img.id !== imageId);
+            updateHiddenField();
+            const previewEl = document.getElementById(`preview-${imageId}`);
+            if (previewEl) previewEl.remove();
+            updateStatus();
+            if (uploadedImages.length === 0 && pendingUploads === 0) {
+                clearAllUploads();
+            }
+        }
+
+        function updateHiddenField() {
+            uploadedImageUrl.value = JSON.stringify(uploadedImages.map(img => img.url));
+        }
+
+        function updateStatus() {
+            const routeHint = document.getElementById('route-hint');
+            const dbButtons = document.querySelectorAll('.db-btn');
+
+            if (pendingUploads > 0) {
+                uploadStatus.textContent = `Uploading ${pendingUploads} image${pendingUploads > 1 ? 's' : ''}...`;
+                uploadStatus.classList.remove('text-green-600');
+                uploadStatus.classList.add('text-gray-600');
+                routeHint.classList.add('hidden');
+                dbButtons.forEach(btn => btn.disabled = true);
+                classificationSection.classList.add('hidden');
+            } else if (uploadedImages.length > 0) {
+                uploadStatus.textContent = `${uploadedImages.length} image${uploadedImages.length > 1 ? 's' : ''} ready`;
+                uploadStatus.classList.remove('text-gray-600');
+                uploadStatus.classList.add('text-green-600');
+                routeHint.classList.remove('hidden');
+                dbButtons.forEach(btn => btn.disabled = false);
+                classificationSection.classList.remove('hidden');
+            } else {
+                uploadStatus.textContent = '';
+                routeHint.classList.add('hidden');
+                dbButtons.forEach(btn => btn.disabled = true);
+                classificationSection.classList.add('hidden');
+            }
+        }
+
+        function clearAllUploads() {
+            uploadedImages = [];
+            pendingUploads = 0;
+            previewGallery.innerHTML = '';
+            uploadedImageUrl.value = '';
+            uploadPrompt.classList.remove('hidden');
+            uploadPreview.classList.add('hidden');
+            uploadLoading.classList.add('hidden');
+            uploadStatus.textContent = '';
+            uploadStatus.classList.remove('text-green-600');
+            uploadStatus.classList.add('text-gray-600');
+            // Reset classification
+            selectedClassification = null;
+            classificationBtns.forEach(b => {
+                b.classList.remove('bg-blue-500', 'text-white', 'border-blue-500');
+                b.classList.add('bg-white');
+            });
+            selectedClassificationText.textContent = 'No classification selected (optional)';
+            classificationSection.classList.add('hidden');
+        }
+
+        // Make removeImage available globally
+        window.removeImage = removeImage;
+
+        // Routing functions
+        const databaseSection = document.getElementById('database-section');
+        const processingSection = document.getElementById('processing-section');
+        const resultsSection = document.getElementById('results-section');
+        const resultsList = document.getElementById('results-list');
+
+        // Add click handlers to database buttons and disable initially
+        document.querySelectorAll('.db-btn').forEach(btn => {
+            btn.disabled = true;
+            btn.addEventListener('click', () => {
+                const dbId = btn.dataset.dbId;
+                const dbName = btn.dataset.dbName;
+                routeToDatabase(dbId, dbName);
+            });
+        });
+
+        async function routeToDatabase(dbId, dbName) {
+            console.log('Routing to:', dbId, dbName, 'Images:', uploadedImages.length);
+            if (uploadedImages.length === 0) {
+                alert('Please upload at least one image first.');
+                return;
+            }
+
+            // Show processing state
+            databaseSection.classList.add('hidden');
+            uploadZone.classList.add('hidden');
+            classificationSection.classList.add('hidden');
+            processingSection.classList.remove('hidden');
+
+            try {
+                const response = await fetch('/api/route', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        image_urls: uploadedImages.map(img => img.url),
+                        database_id: dbId,
+                        classification: selectedClassification,
+                    }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Routing failed');
+                }
+
+                const data = await response.json();
+                showResults(data);
+
+            } catch (error) {
+                console.error('Routing error:', error);
+                alert('Failed to process images: ' + error.message);
+                resetDashboard();
+            }
+        }
+
+        function showResults(data) {
+            processingSection.classList.add('hidden');
+            resultsSection.classList.remove('hidden');
+
+            resultsList.innerHTML = data.results.map(result => {
+                if (result.success) {
+                    const extracted = result.extracted || {};
+                    const title = extracted.title || 'Untitled';
+                    const description = extracted.description || '';
+                    const classification = extracted.classification || '';
+                    // Truncate description for display
+                    const shortDesc = description.length > 150 ? description.substring(0, 150) + '...' : description;
+                    return `
+                        <div class="border rounded-lg p-4 bg-white">
+                            <div class="flex items-start gap-4">
+                                <img src="${result.image_url}" class="w-20 h-20 object-cover rounded flex-shrink-0">
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2">
+                                        <p class="text-sm font-medium text-gray-900">${title}</p>
+                                        ${classification ? `<span class="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">${classification}</span>` : ''}
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-1">${shortDesc}</p>
+                                    <div class="flex items-center gap-3 mt-2">
+                                        <span class="text-xs text-green-600">Created in ${data.database_name}</span>
+                                        <a href="${result.notion_url}" target="_blank" class="text-xs text-blue-600 hover:text-blue-800">
+                                            Open in Notion
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    return `
+                        <div class="border border-red-200 rounded-lg p-4 bg-red-50">
+                            <div class="flex items-start gap-4">
+                                <img src="${result.image_url}" class="w-20 h-20 object-cover rounded opacity-50 flex-shrink-0">
+                                <div class="flex-1">
+                                    <p class="text-sm text-red-600 font-medium">Failed</p>
+                                    <p class="text-xs text-red-500 mt-1">${result.error}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            }).join('');
+        }
+
+        function resetDashboard() {
+            clearAllUploads();
+            resultsSection.classList.add('hidden');
+            processingSection.classList.add('hidden');
+            databaseSection.classList.remove('hidden');
+            uploadZone.classList.remove('hidden');
+        }
+
+        // Route more button
+        document.getElementById('route-more-btn').addEventListener('click', resetDashboard);
+
+        // Sync databases button
+        document.getElementById('sync-btn').addEventListener('click', async () => {
+            const syncBtn = document.getElementById('sync-btn');
+            const syncIcon = document.getElementById('sync-icon');
+            const syncText = document.getElementById('sync-text');
+
+            // Show loading state
+            syncBtn.disabled = true;
+            syncIcon.classList.add('animate-spin');
+            syncText.textContent = 'Syncing...';
+
+            try {
+                const response = await fetch('/api/databases/sync', {
+                    method: 'POST',
+                });
+
+                if (!response.ok) {
+                    throw new Error('Sync failed');
+                }
+
+                // Reload page to show updated databases
+                syncText.textContent = 'Done!';
+                setTimeout(() => {
+                    window.location.reload();
+                }, 500);
+
+            } catch (error) {
+                console.error('Sync error:', error);
+                syncText.textContent = 'Failed';
+                setTimeout(() => {
+                    syncText.textContent = 'Sync';
+                    syncBtn.disabled = false;
+                    syncIcon.classList.remove('animate-spin');
+                }, 2000);
+            }
+        });
+    </script>
 </body>
 </html>
